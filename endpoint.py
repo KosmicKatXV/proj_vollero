@@ -37,7 +37,6 @@ def insert(key):
     return request.json
 
 
-
 def parserInit():
     parser = argparse.ArgumentParser(
                     prog='Endpoint Database 2024',
