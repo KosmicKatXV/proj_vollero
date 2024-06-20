@@ -14,6 +14,13 @@ for item in data["slaves"]:
     ip_port.append((item["IP"], item["port"]))
 print(ip_port)
 
+def parserInit():
+    parser = argparse.ArgumentParser(
+                    prog='Slave Database 2024',
+                    epilog='by Pablo Tores Rodriguez')
+    parser.add_argument('-p ',  '--port',      type=int)
+    parser.add_argument('-f ',  '--replicationfactor',    type=int,default=3)
+    return parser.parse_args()
 
 def init():
     print('Starting endpoint')
