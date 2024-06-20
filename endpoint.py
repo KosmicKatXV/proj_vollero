@@ -1,18 +1,18 @@
 from flask import Flask
 import json
 import requests
+import socket
 
 app = Flask(__name__)
 
-import socket
-
 ip_port = []
-with open('IP.json') as f:
-    data = json.loads(f.read())
 
-for item in data["slaves"]:
-    ip_port.append((item["IP"], item["port"]))
-print(ip_port)
+def importIP():
+    with open('IP.json') as f:
+        data = json.loads(f.read())
+    for item in data["slaves"]:
+        ip_port.append((item["IP"], item["port"]))
+    return ip_port
 
 def parserInit():
     parser = argparse.ArgumentParser(
@@ -22,15 +22,13 @@ def parserInit():
     parser.add_argument('-f ',  '--replicationfactor',    type=int,default=3)
     return parser.parse_args()
 
-def init():
+def main():
     app = Flask(__name__)
     print('Starting endpoint')
     hostname = socket.gethostname()
     IPaddr = socket.gethostbyname(hostname) 
+    parser = parserInit()
     print("Done! Endpoint's ip is: " + IPaddr)
-
-def main():
-    init()
     
 @app.route('/heartbeat')
 def heartbeat():
@@ -40,26 +38,15 @@ def heartbeat():
 
 @app.route('/keys')
 @app.route('/key/<string:key>',methods=['GET'])
-def retrieve(key):
-    value = value.query.filter(User.id == user_id).one_or_none()        
-    if value is None:
-        abort(404)
-    else:
-        return jsonify({
-            'success': True,
-            'value': value.format()
-    })
+def retrieve(key):    
+    return jsonify({
+        'success': True,
+        'value': 12})
 
 @app.route('/key/<string:key>',methods=['POST'])
 def insert(key):
-    value = value.query.filter(User.id == user_id).one_or_none()        
-    if value is None:
-        abort(404)
-    else:
-        return jsonify({
-            'success': True,
-            'value': value.format()
-    })
+    value = requests.post(url_master, json=new_data)
+    return value
 
 if __name__ == "__main__":
     main()
