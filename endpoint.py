@@ -1,10 +1,10 @@
-from flask import Flask
+import argparse
+from flask import Flask, jsonify
 import json
 import requests
 import socket
 
-app = Flask(__name__)
-
+"""
 ip_port = []
 
 def importIP():
@@ -13,23 +13,10 @@ def importIP():
     for item in data["slaves"]:
         ip_port.append((item["IP"], item["port"]))
     return ip_port
+"""
 
-def parserInit():
-    parser = argparse.ArgumentParser(
-                    prog='Endpoint Database 2024',
-                    epilog='by Pablo Tores Rodriguez')
-    parser.add_argument('-p ',  '--port',      type=int)
-    parser.add_argument('-f ',  '--replicationfactor',    type=int,default=3)
-    return parser.parse_args()
+app = Flask(__name__)
 
-def main():
-    app = Flask(__name__)
-    print('Starting endpoint')
-    hostname = socket.gethostname()
-    IPaddr = socket.gethostbyname(hostname) 
-    parser = parserInit()
-    print("Done! Endpoint's ip is: " + IPaddr)
-    
 @app.route('/heartbeat')
 def heartbeat():
     return jsonify({
@@ -38,7 +25,7 @@ def heartbeat():
 
 @app.route('/keys')
 @app.route('/key/<string:key>',methods=['GET'])
-def retrieve(key):    
+def retrieve(key):
     return jsonify({
         'success': True,
         'value': 12})
@@ -47,6 +34,25 @@ def retrieve(key):
 def insert(key):
     value = requests.post(url_master, json=new_data)
     return value
+
+
+def parserInit():
+    parser = argparse.ArgumentParser(
+                    prog='Endpoint Database 2024',
+                    epilog='by Pablo Tores Rodriguez')
+    parser.add_argument('-p ',  '--port', type=int, default=5000)
+    parser.add_argument('-f ',  '--replicationfactor', type=int, default=3)
+    return parser.parse_args()
+
+
+def main():
+    print('Starting endpoint')
+    hostname = socket.gethostname()
+    IPaddr = socket.gethostbyname(hostname) 
+    parser = parserInit()
+    print("Done! Endpoint's ip is: " + IPaddr)
+    app.run(host=IPaddr, port=parser.port)
+
 
 if __name__ == "__main__":
     main()
