@@ -1,5 +1,5 @@
 import argparse
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import json
 import requests
 import socket
@@ -17,6 +17,7 @@ def importIP():
 
 app = Flask(__name__)
 
+
 @app.route('/heartbeat')
 def heartbeat():
     return jsonify({
@@ -32,8 +33,9 @@ def retrieve(key):
 
 @app.route('/key/<string:key>',methods=['POST'])
 def insert(key):
-    value = requests.post(url_master, json=new_data)
-    return value
+    # value = requests.post(url_master, json=new_data)
+    return request.json
+
 
 
 def parserInit():
