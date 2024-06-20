@@ -1,5 +1,18 @@
+from flask import Flask
+import json
+import requests
+
+app = Flask(__name__)
+
 import socket
 
+ip_port = []
+with open('IP.json') as f:
+    data = json.loads(f.read())
+
+for item in data["slaves"]:
+    ip_port.append((item["IP"], item["port"]))
+print(ip_port)
 
 
 def init():
