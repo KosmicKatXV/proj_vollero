@@ -2,7 +2,7 @@ import socket
 import argparse
 import sqlite3
 import hashlib
-from flask import Flask, abort,jsonify, request
+from flask import Flask, abort,jsonify, request, Response
 
 app = Flask(__name__)
 
@@ -23,10 +23,12 @@ def insert(key):
     hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
     conn = sqlite3.connect('slave.db')
     cursor = conn.cursor()
-    cursor.execute("Insert or Replace value FROM "+"slave"+" WHERE key='"+hashedKey+"' values("+hashedKey+","+value+")")
+    query = "Replace into "+"slave"+" values('"+hashedKey+"','"+value+"')"
+    print(query)
+    cursor.execute(query)
     conn.commit()
     conn.close()
-    return 200
+    return Response(status=200)
 
 def dbInit(dbName):
     conn = None
@@ -38,7 +40,7 @@ def dbInit(dbName):
     finally:
         if conn:
             cur = conn.cursor()
-            cur.execute("CREATE TABLE IF NOT EXISTS "+"slave"+" (key text PRIMARY KEY, value text)")
+            cur.execute("CREATE TABLE IF NOT EXISTS "+"slave"+" (key VARCHAR(65) PRIMARY KEY, value VARCHAR(255))")
             conn.commit()
             conn.close()
 
