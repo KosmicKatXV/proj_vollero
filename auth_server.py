@@ -13,7 +13,7 @@ app.config['SECRET_KEY'] = 'p4ssword'
 s = Serializer(app.config['SECRET_KEY'], expires_in=900)
 
 
-@app.route('/token', methods=['POST']) # POST method because sensitive info
+@app.route('/token', methods=['POST'])  # POST method because sensitive info
 def get_token():
     auth = request.authorization
     if not auth or not auth.username or not auth.password:
@@ -21,10 +21,10 @@ def get_token():
 
     if auth.password == '4dmin':
         token = s.dumps({'user': auth.username, 'admin': True}).decode('utf-8')
+        return jsonify({'token': token, 'message': 'Token created, admin access granted', 'username': auth.username})
     else:
         token = s.dumps({'user': auth.username, 'admin': False}).decode('utf-8')
-
-    return jsonify({'token': token, 'message': 'Token created, admin access granted', 'username': auth.username})
+        return jsonify({'token': token, 'message': 'Token not granted', 'username': auth.username})
 
 
 def parserInit():

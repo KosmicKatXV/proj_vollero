@@ -44,18 +44,19 @@ def retrieve(key):
         'success': True,
         'value': 12})
 
+
 @app.route('/key/<string:key>',methods=['POST'])
 def insert(key):
     token = request.headers.get('token')
     try:
-        data = s.loads(token)
+        data = s.loads(token)   # deserializing token recieved in the request
     except (SignatureExpired, BadSignature):
         return jsonify({'error': 'Invalid or Expired token'}), 401
 
     if not data['admin']:
         return jsonify({'error': 'Admin access required'}), 402
-
-    return request.json
+    else:
+        return jsonify({'success': True, 'message': 'Value inserted', 'user': data['user']}), 200
 
 
 def parserInit():
