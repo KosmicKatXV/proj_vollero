@@ -1,7 +1,8 @@
 import socket
 import argparse
 import sqlite3
-from flask import Flask, jsonify, request
+import hashlib
+from flask import Flask, jsonify, request, Response
 
 app = Flask(__name__)
 
@@ -10,45 +11,38 @@ app = Flask(__name__)
 def heartbeat():
     return jsonify({"alive": True})
 
+@app.route('/slaves', methods=['POST'])
+def getSalvesList():
+    slaves = request.json['slaves']
+    for (ip,port) in slaves:
+        slavesList.append((ip,port))
+    print(slavesList)
+    return jsonify({"alive": True})
 
 @app.route('/key/<string:key>', methods=['POST'])
 def insert(key):
-    print("func call")
-    print(request.json)
     value = request.json['value']
-    conn = sqlite3.connect('master.db')
-    cur = conn.cursor()
-    cur.execute(""" CREATE TABLE IF NOT EXISTS keyvalue (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key TEXT UNIQUE NOT NULL,
-            value TEXT NOT NULL)   """)
+    hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
+    conn = sqlite3.connect(dbName)
+    cursor = conn.cursor()
+    query = "Replace into "+dbName[:-3]+" values('"+hashedKey+"','"+value+"')"
+    print(query)
+    cursor.execute(query)
     conn.commit()
     conn.close()
-    return jsonify({'success': True})
-    """if value is None:
-        abort(404)
-    else:
-        return jsonify({
-            'success': True,
-            'value': value.format()
-    })"""
-
+    return Response(status=200)
 
 
 def dbInit(dbName):
     conn = None
     try:
         conn = sqlite3.connect(dbName)
-        print(sqlite3.sqlite_version)
     except sqlite3.Error as e:
         print(e)
     finally:
         if conn:
             cur = conn.cursor()
-            cur.execute("CREATE TABLE IF NOT EXISTS "+"master"+" (key text PRIMARY KEY, value text)")
-            # key text means that the first column is type text and named key
-            # PRIMARY KEY means that the key column acts as the primary key of the table
-            # value text means that the second column is type text and named value
+            cur.execute("CREATE TABLE IF NOT EXISTS "+dbName[:-3]+" (key VARCHAR(65) PRIMARY KEY, value VARCHAR(255))")
             conn.commit()
             conn.close()
 
@@ -57,6 +51,7 @@ def parserInit():
         prog='Master Database 2024',
         epilog='by Pablo Tores Rodriguez')
     parser.add_argument('-p ', '--port', type=int, default=5010)
+    parser.add_argument('-db ', '--database', type=str,default="master.db")
     return parser.parse_args()
 
 def init():
@@ -67,8 +62,12 @@ def init():
     return IPaddr
 
 def main():
+    global dbName
+    global slavesList
+    slavesList = []
     args = parserInit()
-    dbInit('master.db')
+    dbName = args.database
+    dbInit(dbName)
     IPaddr = init()
     app.run(host=IPaddr, port=args.port)
 
