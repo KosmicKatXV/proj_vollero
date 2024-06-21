@@ -3,6 +3,8 @@ from flask import Flask, jsonify, request
 import json
 import requests
 import socket
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
+
 
 """
 ip_port = []
@@ -16,6 +18,8 @@ def importIP():
 """
 
 app = Flask(__name__)
+app.config['SECRET_KEY']= 'p4ssword'
+s = Serializer(app.config['SECRET_KEY'])
 
 
 @app.route('/heartbeat')
@@ -25,15 +29,32 @@ def heartbeat():
     })
 
 @app.route('/keys')
-@app.route('/key/<string:key>',methods=['GET'])
+@app.route('/key/<string:key>', methods=['GET'])
 def retrieve(key):
+    token = request.headers.get('token')
+    try:
+        data = s.loads(token)
+    except (SignatureExpired, BadSignature):
+        return jsonify({'error': 'Invalid or Expired token'}), 401
+
+    if not data['user']:
+        return jsonify({'error': 'no user recognized'}), 402
+
     return jsonify({
         'success': True,
         'value': 12})
 
 @app.route('/key/<string:key>',methods=['POST'])
 def insert(key):
-    # value = requests.post(url_master, json=new_data)
+    token = request.headers.get('token')
+    try:
+        data = s.loads(token)
+    except (SignatureExpired, BadSignature):
+        return jsonify({'error': 'Invalid or Expired token'}), 401
+
+    if not data['admin']:
+        return jsonify({'error': 'Admin access required'}), 402
+
     return request.json
 
 
@@ -57,3 +78,15 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # THESE COMMENTS ARE TO CORRECTLT MAKE A REQUEST TO THE ENDPOINT
+    """
+    To test your endpoint.py follow these steps:  
+    Run your endpoint.py script. This will start your Flask server.
+    Open the RESTED extension in your browser.
+    Set the HTTP method to either GET or POST depending on the request 
+    In the URL field, enter the URL of your endpoint. This will be http://<your-server-ip>:<your-server-port>/key/<your-key>.
+    In the Headers section, add a new header with the name token and the value as the token you received from the auth server.
+    If you're making a POST request, you can enter the data you want to send in the Body section.
+    Click on the Send button to send the request.
+    """
