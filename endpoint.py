@@ -28,7 +28,7 @@ def heartbeat():
         'alive': True
     })
 
-@app.route('/keys')
+
 @app.route('/key/<string:key>', methods=['GET'])
 def retrieve(key):
     token = request.headers.get('token')
@@ -40,13 +40,16 @@ def retrieve(key):
     if not data['user']:
         return jsonify({'error': 'no user recognized'}), 402
 
-    return jsonify({
-        'success': True,
-        'value': 12})
+    # if user is recognized, and is either admin or not then it can read from slaves
+    else:
+        # admins can read from slaves and master
+        response = requests.get(f'http://slaveserverIP:port/key/{key}', headers={'token': token})
+        return response.json(), response.status_code
 
 
-@app.route('/key/<string:key>',methods=['POST'])
+@app.route('/key/<string:key>', methods=['POST'])
 def insert(key):
+    value = request.json['value']
     token = request.headers.get('token')
     try:
         data = s.loads(token)   # deserializing token recieved in the request
@@ -56,7 +59,8 @@ def insert(key):
     if not data['admin']:
         return jsonify({'error': 'Admin access required'}), 402
     else:
-        return jsonify({'success': True, 'message': 'Value inserted', 'user': data['user']}), 200
+        response = requests.get(f'http://masterserverIP:port/key/{key}', headers={'token': token}, json={'value': value})
+        return response.json(), response.status_code
 
 
 def parserInit():
