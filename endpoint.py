@@ -18,7 +18,7 @@ def importIP():
 """
 
 app = Flask(__name__)
-app.config['SECRET_KEY']= 'p4ssword'
+app.config['SECRET_KEY'] = 'p4ssword'
 s = Serializer(app.config['SECRET_KEY'])
 
 
@@ -49,17 +49,23 @@ def retrieve(key):
 
 @app.route('/key/<string:key>', methods=['POST'])
 def insert(key):
-    value = request.json['value']
+    print("func call")
+    #  NBB in the header of the request name:'Content-Type' value:'application/json' is required
+    data = request.get_json()  # get the json value from the request
+    value = data['value']
     token = request.headers.get('token')
     try:
         data = s.loads(token)   # deserializing token recieved in the request
     except (SignatureExpired, BadSignature):
         return jsonify({'error': 'Invalid or Expired token'}), 401
-
     if not data['admin']:
+        print(data['admin'])
         return jsonify({'error': 'Admin access required'}), 402
     else:
-        response = requests.get(f'http://masterserverIP:port/key/{key}', headers={'token': token}, json={'value': value})
+        print(data['admin'])
+        # NBB Get requests don't have a body so if u need to insert values u are meant to
+        # do a request.post or else u will get a 400 bad request error
+        response = requests.post(f'http://192.168.56.1:5010/key/{key}', headers={'token': token}, json={'value': value})
         return response.json(), response.status_code
 
 

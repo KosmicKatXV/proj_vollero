@@ -1,9 +1,10 @@
 import socket
 import argparse
 import sqlite3
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
+
 
 @app.route('/hearbeat', methods=['GET'])
 def heartbeat():
@@ -12,14 +13,26 @@ def heartbeat():
 
 @app.route('/key/<string:key>', methods=['POST'])
 def insert(key):
-    value = value.query.filter(User.id == user_id).one_or_none()
-    if value is None:
+    print("func call")
+    print(request.json)
+    value = request.json['value']
+    conn = sqlite3.connect('master.db')
+    cur = conn.cursor()
+    cur.execute(""" CREATE TABLE IF NOT EXISTS keyvalue (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT UNIQUE NOT NULL,
+            value TEXT NOT NULL)   """)
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+    """if value is None:
         abort(404)
     else:
         return jsonify({
             'success': True,
             'value': value.format()
-    })
+    })"""
+
 
 
 def dbInit(dbName):
@@ -43,7 +56,7 @@ def parserInit():
     parser = argparse.ArgumentParser(
         prog='Master Database 2024',
         epilog='by Pablo Tores Rodriguez')
-    parser.add_argument('-p ', '--port', type=int, default=5000)
+    parser.add_argument('-p ', '--port', type=int, default=5010)
     return parser.parse_args()
 
 def init():
@@ -62,3 +75,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
