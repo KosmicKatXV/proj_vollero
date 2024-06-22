@@ -154,3 +154,5 @@ cython_debug/
 
 #Databases
 *.db
+#Json files
+*.json
