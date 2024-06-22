@@ -33,7 +33,7 @@ def delSlavesList():
 @app.route('/key/<string:key>', methods=['POST'])
 def insert(key):
     value = request.json['value']
-    replication_factor = request.json['replication_factor']
+    replication_factor = request.json['replication']
     hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
     conn = sqlite3.connect(dbName)
     cursor = conn.cursor()
@@ -44,7 +44,8 @@ def insert(key):
     # now i need to write the same thing in the slaves using the replication factor
     replicate_to_slaves(key, value, replication_factor)
     conn.close()
-    return Response(status=200)
+    # i need a responde that can contain json data
+    return jsonify({"message": "Insertion successful"}), 200
 
 
 def dbInit(dbName):

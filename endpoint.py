@@ -3,7 +3,7 @@ from flask import Flask, jsonify, request
 import json
 import requests
 import socket
-from itsdangerous import URLSafeTimedSerializer as Serializer,BadSignature, SignatureExpired
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'p4ssword'
@@ -66,11 +66,13 @@ def retrieve(key):
 @app.route('/key/<string:key>', methods=['POST'])
 def insert(key):
     print("func call")
+    #  NBB important il CONTENT-TYPE deve essere application/json
     #  NBB in the header of the request name:'Content-Type' value:'application/json' is required
     data = request.get_json()  # get the json value from the request
     value = data['value']
     replication_f = data['rep']
     token = request.headers.get('token')
+    print(token,replication_f,value)
     try:
         tok = s.loads(token)   # deserializing token recieved in the request
     except (SignatureExpired, BadSignature):
@@ -82,9 +84,9 @@ def insert(key):
         print(tok['admin'])
         # NBB Get requests don't have a body so if u need to insert values u are meant to
         # do a request.post or else u will get a 400 bad request error
-        response = requests.post(f'http://192.168.56.1:5010/key/{key}', headers={'token': token}, json={'value': value}, timeout=timeout, replication=replication_f)
+        response = requests.post(f'http://192.168.56.1:5010/key/{key}', headers={'token': token}, json={'value': value, 'replication': replication_f}, timeout=timeout)
         return response.json(), response.status_code
-    
+
 def importIP():
     output = []
     output2 = []
