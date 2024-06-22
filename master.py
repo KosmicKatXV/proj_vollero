@@ -2,6 +2,7 @@ import socket
 import argparse
 import sqlite3
 import hashlib
+import requests
 from flask import Flask, jsonify, request, Response
 
 app = Flask(__name__)
@@ -11,6 +12,7 @@ app = Flask(__name__)
 def heartbeat():
     return jsonify({"alive": True})
 
+
 @app.route('/slaves', methods=['POST'])
 def getSlavesList():
     slaves = request.json['slaves']
@@ -19,6 +21,7 @@ def getSlavesList():
     print(slavesList)
     return jsonify({"alive": True})
 
+
 @app.route('/slaves', methods=['DELETE'])
 def delSlavesList():
     slaves = request.json['slaves']
@@ -26,9 +29,11 @@ def delSlavesList():
         if(slave not in slavesList): slavesList.remove(slave)
     return jsonify({"alive": True})
 
+
 @app.route('/key/<string:key>', methods=['POST'])
 def insert(key):
     value = request.json['value']
+    replication_factor = request.json['replication_factor']
     hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
     conn = sqlite3.connect(dbName)
     cursor = conn.cursor()
@@ -36,6 +41,8 @@ def insert(key):
     print(query)
     cursor.execute(query)
     conn.commit()
+    # now i need to write the same thing in the slaves using the replication factor
+    replicate_to_slaves(key, value, replication_factor)
     conn.close()
     return Response(status=200)
 
@@ -67,6 +74,17 @@ def init():
     IPaddr = socket.gethostbyname(hostname)
     print("Done! Master's ip is: " + IPaddr)
     return IPaddr
+
+
+def replicate_to_slaves(key, value, replication_factor):
+    for i in range(min(replication_factor,len(slavesList))):
+        slave_ip, slave_port = slavesList[i]
+        response = requests.post(f'http://{slave_ip}:{slave_port}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
+        if response.status_code != 200:
+            return jsonify({"error": f"Failed to replicate to slave at + {slave_ip}:{slave_port}"})
+        else:
+            return jsonify({"message": f"Replication successful at + {slave_ip}:{slave_port}"})
+
 
 def main():
     global dbName
