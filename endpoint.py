@@ -69,19 +69,23 @@ def insert(key):
     #  NBB in the header of the request name:'Content-Type' value:'application/json' is required
     data = request.get_json()  # get the json value from the request
     value = data['value']
+    replication_f = data['rep']
+    print(replication_f)
     token = request.headers.get('token')
+    print(token)
     try:
-        data = s.loads(token)   # deserializing token recieved in the request
+        tok = s.loads(token)   # deserializing token recieved in the request
     except (SignatureExpired, BadSignature):
+        print(-1)
         return jsonify({'error': 'Invalid or Expired token'}), 401
-    if not data['admin']:
+    if not tok['admin']:
         print(data['admin'])
         return jsonify({'error': 'Admin access required'}), 402
     else:
         print(data['admin'])
         # NBB Get requests don't have a body so if u need to insert values u are meant to
         # do a request.post or else u will get a 400 bad request error
-        response = requests.post(f'http://192.168.56.1:5010/key/{key}', headers={'token': token}, json={'value': value}, timeout=timeout)
+        response = requests.post(f'http://192.168.56.1:5010/key/{key}', headers={'token': token}, json={'value': value}, timeout=timeout, replication=replication_f)
         return response.json(), response.status_code
     
 def importIP():
