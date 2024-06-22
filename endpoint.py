@@ -3,19 +3,7 @@ from flask import Flask, jsonify, request
 import json
 import requests
 import socket
-from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
-
-
-"""
-ip_port = []
-
-def importIP():
-    with open('IP.json') as f:
-        data = json.loads(f.read())
-    for item in data["slaves"]:
-        ip_port.append((item["IP"], item["port"]))
-    return ip_port
-"""
+from itsdangerous import URLSafeTimedSerializer as Serializer,BadSignature, SignatureExpired
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'p4ssword'
@@ -31,7 +19,7 @@ def heartbeat():
 
 @app.route('/key/<string:key>', methods=['GET'])
 def retrieve(key):
-    token = request.headers.get('token')
+    token = request.headers.get('token', timeout=timeout)
     try:
         data = s.loads(token)
     except (SignatureExpired, BadSignature):
@@ -43,7 +31,7 @@ def retrieve(key):
     # if user is recognized, and is either admin or not then it can read from slaves
     else:
         # admins can read from slaves and master
-        response = requests.get(f'http://slaveserverIP:port/key/{key}', headers={'token': token})
+        response = requests.get(f'http://slaveserverIP:port/key/{key}', headers={'token': token}, timeout=timeout)
         return response.json(), response.status_code
 
 
@@ -65,26 +53,54 @@ def insert(key):
         print(data['admin'])
         # NBB Get requests don't have a body so if u need to insert values u are meant to
         # do a request.post or else u will get a 400 bad request error
-        response = requests.post(f'http://192.168.56.1:5010/key/{key}', headers={'token': token}, json={'value': value})
+        response = requests.post(f'http://192.168.56.1:5010/key/{key}', headers={'token': token}, json={'value': value}, timeout=timeout)
         return response.json(), response.status_code
+    
+def importIP():
+    output = []
+    output2 = []
+    with open('IP.json') as f:
+        data = json.loads(f.read())
+    for item in data["slaves"]:
+        output.append((item["IP"]+':'+item["port"]))
+    for item in data["masters"]:
+        output2.append((item["IP"]+':'+item["port"]))
+    return output,output2
 
+def sendJson(json,receiverList,path):
+    for receiver in receiverList:
+        try:
+            response = requests.post(f'http://'+receiver+path, headers={'Content-Type': 'application/json'}, json=json, timeout=timeout)
+        except:
+            fallen.append(receiver)
 
 def parserInit():
     parser = argparse.ArgumentParser(
                     prog='Endpoint Database 2024',
                     epilog='by Pablo Tores Rodriguez')
-    parser.add_argument('-p ',  '--port', type=int, default=5000)
+    parser.add_argument('-p ',  '--port', type=int, default=3000)
     parser.add_argument('-f ',  '--replicationfactor', type=int, default=3)
+    parser.add_argument('-t ',  '--timeout', type=int, default=5)
     return parser.parse_args()
 
 
 def main():
-    print('Starting endpoint')
+    global slaves
+    global masters
+    global fallen
+    global timeout
+    print('Starting endpoint...')
     hostname = socket.gethostname()
     IPaddr = socket.gethostbyname(hostname) 
-    parser = parserInit()
+    args = parserInit()
+    timeout = args.timeout
+    slaves,masters = importIP()
+    fallen = []
     print("Done! Endpoint's ip is: " + IPaddr)
-    app.run(host=IPaddr, port=parser.port)
+    print("Sending info to masters and slaves...")
+    sendJson({'slaves':slaves},masters,'/slaves')
+    sendJson({'masters':masters},slaves,'/masters')
+    app.run(host=IPaddr, port=args.port)
 
 
 if __name__ == "__main__":

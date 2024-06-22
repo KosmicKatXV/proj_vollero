@@ -14,8 +14,8 @@ def heartbeat():
 @app.route('/slaves', methods=['POST'])
 def getSalvesList():
     slaves = request.json['slaves']
-    for (ip,port) in slaves:
-        slavesList.append((ip,port))
+    for slave in slaves:
+        if(slave not in slavesList): slavesList.append(slave)
     print(slavesList)
     return jsonify({"alive": True})
 
@@ -50,7 +50,7 @@ def parserInit():
     parser = argparse.ArgumentParser(
         prog='Master Database 2024',
         epilog='by Pablo Tores Rodriguez')
-    parser.add_argument('-p ', '--port', type=int, default=5010)
+    parser.add_argument('-p ', '--port', type=int, default=5000)
     parser.add_argument('-db ', '--database', type=str,default="master.db")
     return parser.parse_args()
 
