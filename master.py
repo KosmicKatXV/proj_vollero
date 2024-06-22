@@ -12,11 +12,18 @@ def heartbeat():
     return jsonify({"alive": True})
 
 @app.route('/slaves', methods=['POST'])
-def getSalvesList():
+def getSlavesList():
     slaves = request.json['slaves']
     for slave in slaves:
         if(slave not in slavesList): slavesList.append(slave)
     print(slavesList)
+    return jsonify({"alive": True})
+
+@app.route('/slaves', methods=['DELETE'])
+def delSlavesList():
+    slaves = request.json['slaves']
+    for slave in slaves:
+        if(slave not in slavesList): slavesList.remove(slave)
     return jsonify({"alive": True})
 
 @app.route('/key/<string:key>', methods=['POST'])

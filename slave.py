@@ -31,11 +31,18 @@ def insert(key):
     return Response(status=200)
 
 @app.route('/masters', methods=['POST'])
-def getSalvesList():
+def getMasterList():
     masters = request.json['masters']
     for master in masters:
         if(master not in mastersList): mastersList.append(master)
     print(mastersList)
+    return jsonify({"alive": True})
+
+@app.route('/masters', methods=['DELETE'])
+def delMasterList():
+    masters = request.json['masters']
+    for master in masters:
+        if(master not in mastersList): mastersList.remove(master)
     return jsonify({"alive": True})
 
 def dbInit(dbName):

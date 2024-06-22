@@ -16,6 +16,34 @@ def heartbeat():
         'alive': True
     })
 
+@app.route('/masters', methods=['POST'])
+def getMasterList():
+    m = request.json['masters']
+    for master in m:
+        if(master not in masters): masters.append(master)
+    return jsonify({"alive": True})
+
+@app.route('/slaves', methods=['POST'])
+def getSlavesList():
+    s = request.json['slaves']
+    for slave in s:
+        if(slave not in slaves): slaves.append(slave)
+    return jsonify({"alive": True})
+
+@app.route('/masters', methods=['DELETE'])
+def delMasterList():
+    m = request.json['masters']
+    for master in m:
+        if(master in masters): masters.remove(master)
+    return jsonify({"alive": True})
+
+@app.route('/slaves', methods=['DELETE'])
+def delSlavesList():
+    s = request.json['slaves']
+    for slave in s:
+        if(slave in slaves): slaves.remove(slave)
+    print(slaves)
+    return jsonify({"alive": True})
 
 @app.route('/key/<string:key>', methods=['GET'])
 def retrieve(key):
