@@ -10,7 +10,7 @@ app.config['SECRET_KEY'] = 'p4ssword'
 # for enconding and decoding the token
 
 # create instance of Serializer with exp time of 900 secs (15 mins)
-s = Serializer(app.config['SECRET_KEY'], expires_in=900)
+s = Serializer(app.config['SECRET_KEY'])
 
 
 @app.route('/token', methods=['POST'])  # POST method because sensitive info
@@ -20,10 +20,10 @@ def get_token():
         return jsonify({'message': 'Could not verify', 'WWW-Authenticate': 'Basic auth="Login required"'}), 401
 
     if auth.password == '4dmin':
-        token = s.dumps({'user': auth.username, 'admin': True}).decode('utf-8')
+        token = s.dumps({'user': auth.username, 'admin': True})
         return jsonify({'token': token, 'message': 'Token created, admin access granted', 'username': auth.username})
     else:
-        token = s.dumps({'user': auth.username, 'admin': False}).decode('utf-8')
+        token = s.dumps({'user': auth.username, 'admin': False})
         return jsonify({'token': token, 'message': 'Token not granted', 'username': auth.username})
 
 

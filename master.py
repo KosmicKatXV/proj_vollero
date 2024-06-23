@@ -43,6 +43,7 @@ def insert(key):
     conn.commit()
     # now i need to write the same thing in the slaves using the replication factor
     replicate_to_slaves(key, value, replication_factor)
+    # synchronous replication. Master waits for all slaves to replicate the data and then sends a response
     conn.close()
     # i need a responde that can contain json data
     return jsonify({"message": "Insertion successful"}), 200
