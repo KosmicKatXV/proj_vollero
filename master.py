@@ -33,6 +33,7 @@ def delSlavesList():
 
 @app.route('/key/<string:key>', methods=['POST'])
 def insert(key):
+    # //clear
     value = request.json['value']
     replication_factor = request.json['replication']
     hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
@@ -43,11 +44,13 @@ def insert(key):
     cursor.execute(query)
     conn.commit()
     # now i need to write the same thing in the slaves using the replication factor
-    replicate_to_slaves(key, value, replication_factor)
+    responses = replicate_to_slaves(key, value, replication_factor)
+    print(responses)
     # synchronous replication. Master waits for all slaves to replicate the data and then sends a response
     conn.close()
     # i need a responde that can contain json data
     return jsonify({"message": "Insertion successful"}), 200
+
 
 
 def dbInit(dbName):
@@ -79,16 +82,20 @@ def init():
     return IPaddr
 
 
+# if i return something right after the first if it will just exit the function
+# i need to collect the responses from the slaves and return them after the for loop
 def replicate_to_slaves(key, value, replication_factor):
+    responses = []
+    print(slavesList)
     r = random.sample(range(len(slavesList)), min(replication_factor,len(slavesList)))
+    print(r)
     for i in range(len(r)):
         response = requests.post(f'http://{slavesList[r[i]]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
-        #response = requests.post(f'http://{slavesList[r[i]]}/key/{key}', headers={'token': token,'Content-Type': 'application/json'}, json={'value': data['value'], 'replication': data['rep']}, timeout=timeout)
-        
         if response.status_code != 200:
-            return jsonify({"error": f"Failed to replicate to slave at + {slavesList[r[i]]}"})
+            responses.append({"error": f"Failed to replicate to slave at + {slavesList[r[i]]}"})
         else:
-            return jsonify({"message": f"Replication successful at + {slavesList[r[i]]}"})
+            responses.append({"message": f"Replication successful at + {slavesList[r[i]]}"})
+    return jsonify(responses), 200
 
 
 def main():
