@@ -16,8 +16,8 @@ def heartbeat():
 @app.route('/slaves', methods=['POST'])
 def getSlavesList():
     slaves = request.json['slaves']
-    for (ip,port) in slaves:
-        slavesList.append((ip,port))
+    for s in slaves:
+        slavesList.append(s)
     print(slavesList)
     return jsonify({"alive": True})
 
@@ -80,12 +80,11 @@ def init():
 
 def replicate_to_slaves(key, value, replication_factor):
     for i in range(min(replication_factor,len(slavesList))):
-        slave_ip, slave_port = slavesList[i]
-        response = requests.post(f'http://{slave_ip}:{slave_port}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
+        response = requests.post(f'http://{slavesList[i]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
         if response.status_code != 200:
-            return jsonify({"error": f"Failed to replicate to slave at + {slave_ip}:{slave_port}"})
+            return jsonify({"error": f"Failed to replicate to slave at + {slavesList[i]}"})
         else:
-            return jsonify({"message": f"Replication successful at + {slave_ip}:{slave_port}"})
+            return jsonify({"message": f"Replication successful at + {slavesList[i]}"})
 
 
 def main():

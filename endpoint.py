@@ -105,10 +105,7 @@ def insert(key):
         response = requests.post(f'http://192.168.56.1:5010/key/{key}', headers={'token': token}, json={'value': value, 'replication': replication_f}, timeout=timeout)
         return response.json(), response.status_code
 
-def createMatrix():
-    matrix = []
-    for row in range(len(slaves)): matrix.append([])
-    return matrix
+
 
 def importIP():
     output = []
@@ -152,8 +149,6 @@ def main():
     timeout = args.timeout
     slaves,masters = importIP()
     fallen = []
-    slaveDataMatrix = createMatrix()
-    keys = []
     print(slaveDataMatrix)
     print("Done! Endpoint's ip is: " + IPaddr)
     print("Sending info to masters and slaves...")
