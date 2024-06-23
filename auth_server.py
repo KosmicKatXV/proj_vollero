@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 import socket
 import argparse
-from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from itsdangerous import URLSafeTimedSerializer as Serializer
 # TimedJSONWebSignatureSerializer is a class that allows us to create and verify a JSON web Token
 
 

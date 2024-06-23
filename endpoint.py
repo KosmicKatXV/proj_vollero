@@ -3,7 +3,7 @@ from flask import Flask, jsonify, request
 import json
 import requests
 import socket
-from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired
+from itsdangerous import URLSafeTimedSerializer as Serializer, BadSignature, SignatureExpired
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'p4ssword'
@@ -105,6 +105,11 @@ def insert(key):
         response = requests.post(f'http://192.168.56.1:5010/key/{key}', headers={'token': token}, json={'value': value, 'replication': replication_f}, timeout=timeout)
         return response.json(), response.status_code
 
+def createMatrix():
+    matrix = []
+    for row in range(len(slaves)): matrix.append([])
+    return matrix
+
 def importIP():
     output = []
     output2 = []
@@ -138,6 +143,8 @@ def main():
     global masters
     global fallen
     global timeout
+    global slaveDataMatrix
+    global keys
     print('Starting endpoint...')
     hostname = socket.gethostname()
     IPaddr = socket.gethostbyname(hostname) 
@@ -145,6 +152,9 @@ def main():
     timeout = args.timeout
     slaves,masters = importIP()
     fallen = []
+    slaveDataMatrix = createMatrix()
+    keys = []
+    print(slaveDataMatrix)
     print("Done! Endpoint's ip is: " + IPaddr)
     print("Sending info to masters and slaves...")
     sendJson({'slaves':slaves},masters,'/slaves')
