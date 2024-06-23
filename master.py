@@ -4,6 +4,7 @@ import sqlite3
 import hashlib
 import requests
 from flask import Flask, jsonify, request, Response
+from random import random
 
 app = Flask(__name__)
 
@@ -79,12 +80,13 @@ def init():
 
 
 def replicate_to_slaves(key, value, replication_factor):
-    for i in range(min(replication_factor,len(slavesList))):
-        response = requests.post(f'http://{slavesList[i]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
+    r = random.sample(range(min(replication_factor,len(slavesList))), replication_factor)
+    for i in range(len(r)):
+        response = requests.post(f'http://{slavesList[r[i]]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
         if response.status_code != 200:
-            return jsonify({"error": f"Failed to replicate to slave at + {slavesList[i]}"})
+            return jsonify({"error": f"Failed to replicate to slave at + {slavesList[r[i]]}"})
         else:
-            return jsonify({"message": f"Replication successful at + {slavesList[i]}"})
+            return jsonify({"message": f"Replication successful at + {slavesList[r[i]]}"})
 
 
 def main():
