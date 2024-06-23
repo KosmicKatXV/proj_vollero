@@ -4,7 +4,7 @@ import sqlite3
 import hashlib
 import requests
 from flask import Flask, jsonify, request, Response
-from random import random
+import random
 
 app = Flask(__name__)
 
@@ -38,7 +38,7 @@ def insert(key):
     hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
     conn = sqlite3.connect(dbName)
     cursor = conn.cursor()
-    query = "Replace into "+dbName[:-3]+" values('"+hashedKey+"','"+value+"')"
+    query = "Replace into "+dbName[:-3]+" values('"+hashedKey+"','"+str(value)+"')"
     print(query)
     cursor.execute(query)
     conn.commit()
@@ -67,7 +67,7 @@ def parserInit():
     parser = argparse.ArgumentParser(
         prog='Master Database 2024',
         epilog='by Pablo Tores Rodriguez')
-    parser.add_argument('-p ', '--port', type=int, default=5010)
+    parser.add_argument('-p ', '--port', type=int, default=5000)
     parser.add_argument('-db ', '--database', type=str,default="master.db")
     return parser.parse_args()
 
@@ -80,9 +80,11 @@ def init():
 
 
 def replicate_to_slaves(key, value, replication_factor):
-    r = random.sample(range(min(replication_factor,len(slavesList))), replication_factor)
+    r = random.sample(range(len(slavesList)), min(replication_factor,len(slavesList)))
     for i in range(len(r)):
         response = requests.post(f'http://{slavesList[r[i]]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
+        #response = requests.post(f'http://{slavesList[r[i]]}/key/{key}', headers={'token': token,'Content-Type': 'application/json'}, json={'value': data['value'], 'replication': data['rep']}, timeout=timeout)
+        
         if response.status_code != 200:
             return jsonify({"error": f"Failed to replicate to slave at + {slavesList[r[i]]}"})
         else:

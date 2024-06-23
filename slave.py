@@ -69,6 +69,7 @@ def parserInit():
 def main():
     global dbName
     global mastersList
+    mastersList = []
     print('Starting slave')
     hostname = socket.gethostname()
     IPaddr = socket.gethostbyname(hostname) 
