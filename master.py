@@ -86,17 +86,17 @@ def init():
 # if i return something right after the first if it will just exit the function
 # i need to collect the responses from the slaves and return them after the for loop
 def replicate_to_slaves(key, value, replication_factor):
-    global slavesList
+    random.shuffle(slavesList)
+    trunc_slaves = slavesList[:replication_factor]
     responses = []
     print(slavesList)
-    r = random.sample(range(len(slavesList)), min(replication_factor,len(slavesList)))
-    print(r)
-    for i in range(len(r)):
-        response = requests.post(f'http://{slavesList[r[i]]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
+    print(trunc_slaves)
+    for i in range(len(trunc_slaves)):
+        response = requests.post(f'http://{trunc_slaves[i]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
         if response.status_code != 200:
-            responses.append({"error": f"Failed to replicate to slave at + {slavesList[r[i]]}"})
+            responses.append({"error": f"Failed to replicate to slave at + {trunc_slaves[i]}"})
         else:
-            responses.append({"message": f"Replication successful at + {slavesList[r[i]]}"})
+            responses.append({"message": f"Replication successful at + {trunc_slaves[i]}"})
     return jsonify(responses), 200
 
 
