@@ -16,15 +16,16 @@ def heartbeat():
 
 @app.route('/slaves', methods=['POST'])
 def getSlavesList():
+    global slavesList
     slaves = request.json['slaves']
     for s in slaves:
         slavesList.append(s)
-    print(slavesList)
     return jsonify({"alive": True})
 
 
 @app.route('/slaves', methods=['DELETE'])
 def delSlavesList():
+    global slavesList
     slaves = request.json['slaves']
     for slave in slaves:
         if(slave not in slavesList): slavesList.remove(slave)
@@ -85,6 +86,7 @@ def init():
 # if i return something right after the first if it will just exit the function
 # i need to collect the responses from the slaves and return them after the for loop
 def replicate_to_slaves(key, value, replication_factor):
+    global slavesList
     responses = []
     print(slavesList)
     r = random.sample(range(len(slavesList)), min(replication_factor,len(slavesList)))

@@ -23,7 +23,7 @@ def insert(key):
     hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
     conn = sqlite3.connect(dbName)
     cursor = conn.cursor()
-    query = "Replace into "+dbName[:-3]+" values('"+hashedKey+"','"+value+"')"
+    query = "Replace into "+dbName[:-3]+" values('"+hashedKey+"','"+str(value)+"')"
     print(query)
     cursor.execute(query)
     conn.commit()
