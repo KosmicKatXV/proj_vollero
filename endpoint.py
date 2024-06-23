@@ -16,12 +16,14 @@ def heartbeat():
         'alive': True
     })
 
+
 @app.route('/masters', methods=['POST'])
 def getMasterList():
     m = request.json['masters']
     for master in m:
         if(master not in masters): masters.append(master)
     return jsonify({"alive": True})
+
 
 @app.route('/slaves', methods=['POST'])
 def getSlavesList():
@@ -30,12 +32,14 @@ def getSlavesList():
         if(slave not in slaves): slaves.append(slave)
     return jsonify({"alive": True})
 
+
 @app.route('/masters', methods=['DELETE'])
 def delMasterList():
     m = request.json['masters']
     for master in m:
         if(master in masters): masters.remove(master)
     return jsonify({"alive": True})
+
 
 @app.route('/slaves', methods=['DELETE'])
 def delSlavesList():
@@ -45,19 +49,33 @@ def delSlavesList():
     print(slaves)
     return jsonify({"alive": True})
 
+
 @app.route('/key/<string:key>', methods=['GET'])
 def retrieve(key):
+    print("func call")
     token = request.headers.get('token', timeout=timeout)
     try:
-        data = s.loads(token)
+        tok = s.loads(token)
     except (SignatureExpired, BadSignature):
         return jsonify({'error': 'Invalid or Expired token'}), 401
 
-    if not data['user']:
+    if not tok['user']:
         return jsonify({'error': 'no user recognized'}), 402
 
     # if user is recognized, and is either admin or not then it can read from slaves
     else:
+        for slave in slaves:
+            try:
+                response = requests.get(f'http://{slave}/key/{key}', headers={'token': token}, timeout=timeout)
+                if response.status_code == 200:
+                    data = response.json()
+                    # we need to find a way to search in the db wether the information is there
+            except requests.exceptions.RequestException:
+                continue
+
+        return jsonify({'error': 'No updated data found'}), 404
+
+
         # admins can read from slaves and master
         response = requests.get(f'http://slaveserverIP:port/key/{key}', headers={'token': token}, timeout=timeout)
         return response.json(), response.status_code
