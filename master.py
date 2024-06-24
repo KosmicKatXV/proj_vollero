@@ -20,6 +20,7 @@ def getSlavesList():
     slaves = request.json['slaves']
     for s in slaves:
         slavesList.append(s)
+    print(slavesList)
     return jsonify({"alive": True})
 
 

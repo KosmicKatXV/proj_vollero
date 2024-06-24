@@ -91,6 +91,7 @@ def insert(key):
         print(tok['admin'])
         # NBB Get requests don't have a body so if u need to insert values u are meant to
         # do a request.post or else u will get a 400 bad request error
+        print(type(repFactor))
         print(repFactor)
         response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token}, json={'value': data['value'], 'replication': repFactor}, timeout=timeout)
         return response.json(), response.status_code
