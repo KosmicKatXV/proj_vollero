@@ -4,6 +4,7 @@ import json
 import requests
 import socket
 import random
+import hashlib
 from itsdangerous import URLSafeTimedSerializer as Serializer, BadSignature, SignatureExpired
 
 app = Flask(__name__)
@@ -22,7 +23,7 @@ def heartbeat():
 def getMasterList():
     m = request.json['masters']
     for master in m:
-        if(master not in masters): masters.append(master)
+        if (master not in masters): masters.append(master)
     return jsonify({"alive": True})
 
 
@@ -30,7 +31,7 @@ def getMasterList():
 def getSlavesList():
     s = request.json['slaves']
     for slave in s:
-        if(slave not in slaves): slaves.append(slave)
+        if (slave not in slaves): slaves.append(slave)
     return jsonify({"alive": True})
 
 
@@ -38,7 +39,7 @@ def getSlavesList():
 def delMasterList():
     m = request.json['masters']
     for master in m:
-        if(master in masters): masters.remove(master)
+        if (master in masters): masters.remove(master)
     return jsonify({"alive": True})
 
 
@@ -46,7 +47,7 @@ def delMasterList():
 def delSlavesList():
     s = request.json['slaves']
     for slave in s:
-        if(slave in slaves): slaves.remove(slave)
+        if (slave in slaves): slaves.remove(slave)
     print(slaves)
     return jsonify({"alive": True})
 
@@ -60,7 +61,7 @@ def retrieve(key):
         try:
             response = requests.get(f'http://{slave}/key/{key}', timeout=timeout)
             if response.status_code == 200:
-                print (f"data retrieved from {slave}")
+                print(f"data retrieved from {slave}")
                 return response.json(), response.status_code
                 # we need to find a way to search in the db wether the information is there
         except requests.exceptions.RequestException:
@@ -76,12 +77,12 @@ def insert(key):
     #  NBB important il CONTENT-TYPE deve essere application/json
     #  NBB in the header of the request name:'Content-Type' value:'application/json' is required
     data = request.get_json()  # get the json value from the request
-    #value = data['value']
-    #replication_f = data['rep']
+    # value = data['value']
+    # replication_f = data['rep']
     token = request.headers.get('token')
-    #print(token,replication_f,value)
+    # print(token,replication_f,value)
     try:
-        tok = s.loads(token)   # deserializing token recieved in the request
+        tok = s.loads(token)  # deserializing token recieved in the request
     except (SignatureExpired, BadSignature):
         return jsonify({'error': 'Invalid or Expired token'}), 401
     if not tok['admin']:
@@ -89,13 +90,42 @@ def insert(key):
         return jsonify({'error': 'Admin access required'}), 402
     else:
         print(tok['admin'])
+        sorted_hashes, server_hashes = hash_and_sort_servers(slaves)
+        print(sorted_hashes)
+        print(server_hashes)
+        servers_for_replication = find_correct_server(key, sorted_hashes, server_hashes, repFactor)
+        print(servers_for_replication)
+        # transform servers_for_replication into a string to send it into the body
+        sfr = ' '.join(servers_for_replication)
         # NBB Get requests don't have a body so if u need to insert values u are meant to
         # do a request.post or else u will get a 400 bad request error
-        print(type(repFactor))
-        print(repFactor)
-        response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token}, json={'value': data['value'], 'replication': repFactor}, timeout=timeout)
+        response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token},
+                                 json={'value': data['value'], 'servers': sfr}, timeout=timeout)
         return response.json(), response.status_code
 
+
+def hash_and_sort_servers(servers):
+    # creating a dict where the key is the hash of the server and the value is the server
+    server_hashes = {hashlib.sha256(server.encode('ascii')).hexdigest(): server for server in servers}
+    sorted_hashes = sorted(server_hashes.keys())
+    return sorted_hashes, server_hashes
+
+
+def hash_key(key):
+    return hashlib.sha256(key.encode('ascii')).hexdigest()
+
+
+def find_correct_server(key, sorted_hashes, server_hashes, repFactor):
+    key_hash = hash_key(key)
+    servers_for_replication = []
+    for i, server_hash in enumerate(sorted_hashes):  # server_hashes is a dictionary mapping hash to server_hash
+        if key_hash < server_hash and len(servers_for_replication) < repFactor:  # if the key_hash is less than the server_hash, return the server because that's the
+            # one we should replicate to
+            servers_for_replication.append(server_hashes[server_hash])
+            next_servers = sorted_hashes[i:i+repFactor]  # get the next servers in the list
+            servers_for_replication.extend([server_hashes[server_hash] for server_hash in next_servers if server_hashes[server_hash] not in servers_for_replication])
+            break  # break the loop because we found the server we need to replicate to
+    return servers_for_replication
 
 
 def importIP():
@@ -104,25 +134,28 @@ def importIP():
     with open('IP.json') as f:
         data = json.loads(f.read())
     for item in data["slaves"]:
-        output.append((item["IP"]+':'+item["port"]))
+        output.append((item["IP"] + ':' + item["port"]))
     for item in data["masters"]:
-        output2.append((item["IP"]+':'+item["port"]))
-    return output,output2
+        output2.append((item["IP"] + ':' + item["port"]))
+    return output, output2
 
-def sendJson(json,receiverList,path):
+
+def sendJson(json, receiverList, path):
     for receiver in receiverList:
         try:
-            response = requests.post(f'http://'+receiver+path, headers={'Content-Type': 'application/json'}, json=json, timeout=timeout)
+            response = requests.post(f'http://' + receiver + path, headers={'Content-Type': 'application/json'},
+                                     json=json, timeout=timeout)
         except:
             fallen.append(receiver)
 
+
 def parserInit():
     parser = argparse.ArgumentParser(
-                    prog='Endpoint Database 2024',
-                    epilog='by Pablo Tores Rodriguez')
-    parser.add_argument('-p ',  '--port', type=int, default=3000)
-    parser.add_argument('-f ',  '--replicationfactor', type=int, default=3)
-    parser.add_argument('-t ',  '--timeout', type=int, default=5)
+        prog='Endpoint Database 2024',
+        epilog='by Pablo Tores Rodriguez')
+    parser.add_argument('-p ', '--port', type=int, default=3000)
+    parser.add_argument('-f ', '--replicationfactor', type=int, default=3)
+    parser.add_argument('-t ', '--timeout', type=int, default=5)
     return parser.parse_args()
 
 
@@ -135,16 +168,16 @@ def main():
     global repFactor
     print('Starting endpoint...')
     hostname = socket.gethostname()
-    IPaddr = socket.gethostbyname(hostname) 
+    IPaddr = socket.gethostbyname(hostname)
     args = parserInit()
     timeout = args.timeout
     repFactor = args.replicationfactor
-    slaves,masters = importIP()
+    slaves, masters = importIP()
     fallen = []
     print("Done! Endpoint's ip is: " + IPaddr)
     print("Sending info to masters and slaves...")
-    sendJson({'slaves':slaves},masters,'/slaves')
-    sendJson({'masters':masters},slaves,'/masters')
+    sendJson({'slaves': slaves}, masters, '/slaves')
+    sendJson({'masters': masters}, slaves, '/masters')
     app.run(host=IPaddr, port=args.port)
 
 

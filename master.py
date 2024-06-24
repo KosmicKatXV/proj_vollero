@@ -37,7 +37,8 @@ def delSlavesList():
 def insert(key):
     # //clear
     value = request.json['value']
-    replication_factor = request.json['replication']
+    servers_for_replication = request.json['servers']
+    sfr = servers_for_replication.split()
     hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
     conn = sqlite3.connect(dbName)
     cursor = conn.cursor()
@@ -46,7 +47,7 @@ def insert(key):
     cursor.execute(query)
     conn.commit()
     # now i need to write the same thing in the slaves using the replication factor
-    responses = replicate_to_slaves(key, value, replication_factor)
+    responses = replicate_to_slaves(key, value, sfr)
     print(responses)
     # synchronous replication. Master waits for all slaves to replicate the data and then sends a response
     conn.close()
@@ -86,20 +87,15 @@ def init():
 
 # if i return something right after the first if it will just exit the function
 # i need to collect the responses from the slaves and return them after the for loop
-def replicate_to_slaves(key, value, replication_factor):
-    global slavesList
-    random.shuffle(slavesList)
-    trunc_slaves = slavesList[:replication_factor]
+def replicate_to_slaves(key, value, sfr):
     responses = []
-    print(slavesList)
-    print(trunc_slaves)
-    for i in range(len(trunc_slaves)):
-        response = requests.post(f'http://{trunc_slaves[i]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
+    for i in range(len(sfr)):
+        response = requests.post(f'http://{sfr[i]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
         if response.status_code != 200:
-            responses.append({"error": f"Failed to replicate to slave at + {trunc_slaves[i]}"})
+            responses.append({"error": f"Failed to replicate to slave at + {sfr[i]}"})
         else:
-            responses.append({"message": f"Replication successful at + {trunc_slaves[i]}"})
-    return jsonify(responses), 200
+            responses.append({"message": f"Replication successful at + {sfr[i]}"})
+    return jsonify(responses)
 
 
 def main():
