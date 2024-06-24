@@ -63,7 +63,7 @@ def parserInit():
                     prog='Slave Database 2024',
                     epilog='by Pablo Tores Rodriguez')
     parser.add_argument('-p ', '--port', type=int, default=4001)
-    parser.add_argument('-db ', '--database', type=str,default="slave.db")
+    parser.add_argument('-db ', '--database', type=str)
     return parser.parse_args()
 
 def main():

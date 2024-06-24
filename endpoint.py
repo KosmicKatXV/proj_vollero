@@ -71,6 +71,7 @@ def retrieve(key):
 
 @app.route('/key/<string:key>', methods=['POST'])
 def insert(key):
+    global repFactor
     print("func call")
     #  NBB important il CONTENT-TYPE deve essere application/json
     #  NBB in the header of the request name:'Content-Type' value:'application/json' is required
@@ -90,8 +91,8 @@ def insert(key):
         print(tok['admin'])
         # NBB Get requests don't have a body so if u need to insert values u are meant to
         # do a request.post or else u will get a 400 bad request error
-        print(masters[0])
-        response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token}, json={'value': data['value'], 'replication': data['rep']}, timeout=timeout)
+        print(repFactor)
+        response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token}, json={'value': data['value'], 'replication': repFactor}, timeout=timeout)
         return response.json(), response.status_code
 
 
@@ -130,11 +131,13 @@ def main():
     global fallen
     global timeout
     global keys
+    global repFactor
     print('Starting endpoint...')
     hostname = socket.gethostname()
     IPaddr = socket.gethostbyname(hostname) 
     args = parserInit()
     timeout = args.timeout
+    repFactor = args.replicationfactor
     slaves,masters = importIP()
     fallen = []
     print("Done! Endpoint's ip is: " + IPaddr)
