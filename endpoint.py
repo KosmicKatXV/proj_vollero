@@ -60,6 +60,7 @@ def retrieve(key):
         try:
             response = requests.get(f'http://{slave}/key/{key}', timeout=timeout)
             if response.status_code == 200:
+                print (f"data retrieved from {slave}")
                 return response.json(), response.status_code
                 # we need to find a way to search in the db wether the information is there
         except requests.exceptions.RequestException:
