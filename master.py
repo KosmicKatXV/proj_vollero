@@ -86,6 +86,7 @@ def init():
 # if i return something right after the first if it will just exit the function
 # i need to collect the responses from the slaves and return them after the for loop
 def replicate_to_slaves(key, value, replication_factor):
+    global slavesList
     random.shuffle(slavesList)
     trunc_slaves = slavesList[:replication_factor]
     responses = []
