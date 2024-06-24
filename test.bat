@@ -1,3 +1,6 @@
+:: This is a batch file to start all the servers. It has to be run on CMD not on PS
+
+del /S *.db
 start cmd /k python auth_server.py
 start cmd /k python master.py
 start cmd /k python slave.py -p 4000 -d "slave1.db"
