@@ -39,7 +39,7 @@ def insert(key):
     value = request.json['value']
     servers_for_replication = request.json['servers']
     sfr = servers_for_replication.split()
-    hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
+    hashedKey = hashlib.sha256(key.encode('ascii')).hexdigest()
     conn = sqlite3.connect(dbName)
     cursor = conn.cursor()
     query = "Replace into "+dbName[:-3]+" values('"+hashedKey+"','"+str(value)+"')"

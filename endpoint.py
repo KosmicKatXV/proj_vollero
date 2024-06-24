@@ -106,12 +106,8 @@ def insert(key):
         sfr = ' '.join(servers_for_replication)
         # NBB Get requests don't have a body so if u need to insert values u are meant to
         # do a request.post or else u will get a 400 bad request error
-        response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token},
-                                 json={'value': data['value'], 'servers': sfr}, timeout=timeout)
-        print(type(repFactor))
-        print(repFactor)
         try:
-            response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token}, json={'value': data['value'], 'replication': repFactor}, timeout=timeout)
+            response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token}, json={'value': data['value'], 'servers': sfr}, timeout=timeout)
         except:
             fallen.append(masters[0])
         return response.json(), response.status_code
@@ -132,8 +128,7 @@ def find_correct_server(key, sorted_hashes, server_hashes, repFactor):
     key_hash = hash_key(key)
     servers_for_replication = []
     for i, server_hash in enumerate(sorted_hashes):  # server_hashes is a dictionary mapping hash to server_hash
-        if key_hash < server_hash and len(servers_for_replication) < repFactor:  # if the key_hash is less than the server_hash, return the server because that's the
-            # one we should replicate to
+        if key_hash < server_hash:
             servers_for_replication.append(server_hashes[server_hash])
             next_servers = sorted_hashes[i:i+repFactor]  # get the next servers in the list
             servers_for_replication.extend([server_hashes[server_hash] for server_hash in next_servers if server_hashes[server_hash] not in servers_for_replication])
@@ -167,7 +162,7 @@ def parserInit():
         prog='Endpoint Database 2024',
         epilog='by Pablo Tores Rodriguez')
     parser.add_argument('-p ', '--port', type=int, default=3000)
-    parser.add_argument('-f ', '--replicationfactor', type=int, default=3)
+    parser.add_argument('-f ', '--replicationfactor', type=int, default=1)
     parser.add_argument('-t ', '--timeout', type=int, default=5)
     return parser.parse_args()
 
