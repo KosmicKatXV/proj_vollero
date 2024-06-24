@@ -3,6 +3,7 @@ from flask import Flask, jsonify, request
 import json
 import requests
 import socket
+import random
 from itsdangerous import URLSafeTimedSerializer as Serializer, BadSignature, SignatureExpired
 
 app = Flask(__name__)
@@ -52,33 +53,19 @@ def delSlavesList():
 
 @app.route('/key/<string:key>', methods=['GET'])
 def retrieve(key):
+    global slaves
     print("func call")
-    token = request.headers.get('token', timeout=timeout)
-    try:
-        tok = s.loads(token)
-    except (SignatureExpired, BadSignature):
-        return jsonify({'error': 'Invalid or Expired token'}), 401
+    random.shuffle(slaves)
+    for slave in slaves:
+        try:
+            response = requests.get(f'http://{slave}/key/{key}', timeout=timeout)
+            if response.status_code == 200:
+                return response.json(), response.status_code
+                # we need to find a way to search in the db wether the information is there
+        except requests.exceptions.RequestException:
+            continue
 
-    if not tok['user']:
-        return jsonify({'error': 'no user recognized'}), 402
-
-    # if user is recognized, and is either admin or not then it can read from slaves
-    else:
-        for slave in slaves:
-            try:
-                response = requests.get(f'http://{slave}/key/{key}', headers={'token': token}, timeout=timeout)
-                if response.status_code == 200:
-                    data = response.json()
-                    # we need to find a way to search in the db wether the information is there
-            except requests.exceptions.RequestException:
-                continue
-
-        return jsonify({'error': 'No updated data found'}), 404
-
-
-        # admins can read from slaves and master
-        response = requests.get(f'http://slaveserverIP:port/key/{key}', headers={'token': token}, timeout=timeout)
-        return response.json(), response.status_code
+    return jsonify({'error': 'No updated data found'}), 404
 
 
 @app.route('/key/<string:key>', methods=['POST'])
