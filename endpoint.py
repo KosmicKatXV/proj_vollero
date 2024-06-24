@@ -51,6 +51,13 @@ def delSlavesList():
     print(slaves)
     return jsonify({"alive": True})
 
+@app.route('/fallen', methods=['DELETE'])
+def delFallenList():
+    f = request.json['fallen']
+    for fell in f:
+        if(fell in fallen): fallen.remove(fell)
+    print(fallen)
+    return jsonify({"alive": True})
 
 @app.route('/key/<string:key>', methods=['GET'])
 def retrieve(key):
@@ -64,8 +71,8 @@ def retrieve(key):
                 print(f"data retrieved from {slave}")
                 return response.json(), response.status_code
                 # we need to find a way to search in the db wether the information is there
-        except requests.exceptions.RequestException:
-            continue
+        except:
+            fallen.append(slave)
 
     return jsonify({'error': 'No updated data found'}), 404
 
@@ -101,6 +108,12 @@ def insert(key):
         # do a request.post or else u will get a 400 bad request error
         response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token},
                                  json={'value': data['value'], 'servers': sfr}, timeout=timeout)
+        print(type(repFactor))
+        print(repFactor)
+        try:
+            response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token}, json={'value': data['value'], 'replication': repFactor}, timeout=timeout)
+        except:
+            fallen.append(masters[0])
         return response.json(), response.status_code
 
 
