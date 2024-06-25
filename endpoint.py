@@ -65,16 +65,19 @@ def delFallenList():
 def retrieve(key):
     global slaves
     print("func call")
-    random.shuffle(slaves)
-    for slave in slaves:
+    sorted_hashes, server_hashes = hash_and_sort_servers(slaves)
+    server_hashes_where_resource_is_to_be_found = find_correct_server(key, sorted_hashes, repFactor)
+    servers_for_search = [server_hashes[s_h] for s_h in server_hashes_where_resource_is_to_be_found]
+    print(servers_for_search)
+    for server in servers_for_search:
         try:
-            response = requests.get(f'http://{slave}/key/{key}', timeout=timeout)
+            response = requests.get(f'http://{server}/key/{key}', timeout=timeout)
             if response.status_code == 200:
-                print(f"data retrieved from {slave}")
+                print(f"data successfully retrieved from {server}")
                 return response.json(), response.status_code
                 # we need to find a way to search in the db wether the information is there
         except:
-            fallen.append(slave)
+            fallen.append(server)
 
     return jsonify({'error': 'No updated data found'}), 404
 
