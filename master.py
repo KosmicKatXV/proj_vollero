@@ -39,6 +39,7 @@ def insert(key):
     value = request.json['value']
     servers_for_replication = request.json['servers']
     sfr = servers_for_replication.split()
+    print(sfr)
     hashedKey = hashlib.sha256(key.encode('ascii')).hexdigest()
     conn = sqlite3.connect(dbName)
     cursor = conn.cursor()
@@ -48,12 +49,10 @@ def insert(key):
     conn.commit()
     # now i need to write the same thing in the slaves using the replication factor
     responses = replicate_to_slaves(key, value, sfr)
-    print(responses)
     # synchronous replication. Master waits for all slaves to replicate the data and then sends a response
     conn.close()
     # i need a responde that can contain json data
-    return jsonify({"message": "Insertion successful"}), 200
-
+    return jsonify(responses), 200
 
 
 def dbInit(dbName):
@@ -87,15 +86,16 @@ def init():
 
 # if i return something right after the first if it will just exit the function
 # i need to collect the responses from the slaves and return them after the for loop
-def replicate_to_slaves(key, value, sfr):
+def replicate_to_slaves(key, value: int, sfr: list):
     responses = []
     for i in range(len(sfr)):
         response = requests.post(f'http://{sfr[i]}/key/{key}', headers={'Content-Type': 'application/json'}, json={'value': value}, timeout=5)
         if response.status_code != 200:
-            responses.append({"error": f"Failed to replicate to slave at + {sfr[i]}"})
+            responses.append({"error": f"Failed to replicate to slave at {sfr[i]}"})
         else:
-            responses.append({"message": f"Replication successful at + {sfr[i]}"})
-    return jsonify(responses)
+            responses.append({"message": f"Replication successful at {sfr[i]}"})
+    print(responses)
+    return responses
 
 
 def main():

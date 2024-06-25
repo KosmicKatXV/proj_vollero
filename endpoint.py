@@ -51,13 +51,15 @@ def delSlavesList():
     print(slaves)
     return jsonify({"alive": True})
 
+
 @app.route('/fallen', methods=['DELETE'])
 def delFallenList():
     f = request.json['fallen']
     for fell in f:
-        if(fell in fallen): fallen.remove(fell)
+        if (fell in fallen): fallen.remove(fell)
     print(fallen)
     return jsonify({"alive": True})
+
 
 @app.route('/key/<string:key>', methods=['GET'])
 def retrieve(key):
@@ -98,16 +100,19 @@ def insert(key):
     else:
         print(tok['admin'])
         sorted_hashes, server_hashes = hash_and_sort_servers(slaves)
-        print(sorted_hashes)
         print(server_hashes)
-        servers_for_replication = find_correct_server(key, sorted_hashes, server_hashes, repFactor)
+        print(sorted_hashes)
+        server_hashes_for_replication = find_correct_server(key, sorted_hashes, repFactor)
+        # At this point servers for replication contains the hashes of the servers that need to replicate the data
+        servers_for_replication = [server_hashes[s_h] for s_h in server_hashes_for_replication]
         print(servers_for_replication)
         # transform servers_for_replication into a string to send it into the body
         sfr = ' '.join(servers_for_replication)
         # NBB Get requests don't have a body so if u need to insert values u are meant to
         # do a request.post or else u will get a 400 bad request error
         try:
-            response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token}, json={'value': data['value'], 'servers': sfr}, timeout=timeout)
+            response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token},
+                                     json={'value': data['value'], 'servers': sfr}, timeout=timeout)
         except:
             fallen.append(masters[0])
         return response.json(), response.status_code
@@ -124,17 +129,33 @@ def hash_key(key):
     return hashlib.sha256(key.encode('ascii')).hexdigest()
 
 
-def find_correct_server(key, sorted_hashes, server_hashes, repFactor):
+def grab_elements_around(lst, i, r):
+    #  this function is used to get the servers that need to replicate the data
+    #  it also handles the case in which the server chosen to start replicating is at the end
+    #  of the list of servers and the end_idx = i + r is greater than the length of the list
+    n = len(lst)
+    end_idx = i + r
+
+    if end_idx < n:  # simple case
+        return lst[i:end_idx + 1]
+
+    else:
+        overflow = end_idx + 1 - n  # special case
+        return lst[i - overflow:i] + lst[i:]
+
+
+def find_correct_server(key, sorted_hashes, repFactor):
+    #  this code handles the occasional case where the sliced list is smaller than the repFactor
+    #  in that case we need to get the remaining servers from "under" the initial slice
     key_hash = hash_key(key)
     servers_for_replication = []
     for i, server_hash in enumerate(sorted_hashes):  # server_hashes is a dictionary mapping hash to server_hash
         if key_hash < server_hash:
-            servers_for_replication.append(server_hashes[server_hash])
-            next_servers = sorted_hashes[i:i+repFactor]  # get the next servers in the list
-            servers_for_replication.extend([server_hashes[server_hash] for server_hash in next_servers if server_hashes[server_hash] not in servers_for_replication])
+            server_hashes_for_replication = grab_elements_around(sorted_hashes, i, repFactor)
             break  # break the loop because we found the server we need to replicate to
-    return servers_for_replication
-
+        else:
+            continue
+    return server_hashes_for_replication
 
 def importIP():
     output = []
