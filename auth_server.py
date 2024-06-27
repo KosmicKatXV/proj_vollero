@@ -24,7 +24,7 @@ def get_token():
         return jsonify({'token': token, 'message': 'Token created, admin access granted', 'username': auth.username})
     else:
         token = s.dumps({'user': auth.username, 'admin': False})
-        return jsonify({'token': token, 'message': 'Token not granted', 'username': auth.username})
+        return jsonify({'message': 'Token not granted', 'username': auth.username})
 
 
 def parserInit():

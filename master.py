@@ -9,7 +9,7 @@ import random
 app = Flask(__name__)
 
 
-@app.route('/hearbeat', methods=['GET'])
+@app.route('/heartbeat', methods=['GET'])
 def heartbeat():
     return jsonify({"alive": True})
 

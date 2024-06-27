@@ -6,6 +6,12 @@ from flask import Flask, abort,jsonify, request, Response
 
 app = Flask(__name__)
 
+
+@app.route('/heartbeat', methods=['GET'])
+def heartbeat():
+    return jsonify({"alive": True})
+
+
 @app.route('/key/<string:key>',methods=['GET'])
 def retrieve(key):
     hashedKey = hashlib.sha256((key).encode('ascii')).hexdigest()
