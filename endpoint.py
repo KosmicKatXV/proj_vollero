@@ -5,6 +5,8 @@ import requests
 import socket
 import random
 import hashlib
+import time
+from threading import Thread
 from itsdangerous import URLSafeTimedSerializer as Serializer, BadSignature, SignatureExpired
 
 app = Flask(__name__)
@@ -51,16 +53,6 @@ def delSlavesList():
     print(slaves)
     return jsonify({"alive": True})
 
-
-@app.route('/fallen', methods=['DELETE'])
-def delFallenList():
-    f = request.json['fallen']
-    for fell in f:
-        if (fell in fallen): fallen.remove(fell)
-    print(fallen)
-    return jsonify({"alive": True})
-
-
 @app.route('/key/<string:key>', methods=['GET'])
 def retrieve(key):
     global slaves
@@ -75,9 +67,8 @@ def retrieve(key):
             if response.status_code == 200:
                 print(f"data successfully retrieved from {server}")
                 return response.json(), response.status_code
-                # we need to find a way to search in the db wether the information is there
         except:
-            fallen.append(server)
+            healthCheck(server,"s")
 
     return jsonify({'error': 'No updated data found'}), 404
 
@@ -98,10 +89,10 @@ def insert(key):
     except (SignatureExpired, BadSignature):
         return jsonify({'error': 'Invalid or Expired token'}), 401
     if not tok['admin']:
-        print(tok['admin'])
+        #print(tok['admin'])
         return jsonify({'error': 'Admin access required'}), 402
     else:
-        print(tok['admin'])
+        #print(tok['admin'])
         sorted_hashes, server_hashes = hash_and_sort_servers(slaves)
         print(server_hashes)
         print(sorted_hashes)
@@ -117,7 +108,7 @@ def insert(key):
             response = requests.post(f'http://{masters[0]}/key/{key}', headers={'token': token},
                                      json={'value': data['value'], 'servers': sfr}, timeout=timeout)
         except:
-            fallen.append(masters[0])
+            healthCheck(masters[0],"m")
         return response.json(), response.status_code
 
 
@@ -153,12 +144,10 @@ def find_correct_server(key, sorted_hashes, repFactor):
     key_hash = hash_key(key)
     servers_for_replication = []
     for i, server_hash in enumerate(sorted_hashes):  # server_hashes is a dictionary mapping hash to server_hash
+        #print(key_hash < server_hash)
         if key_hash < server_hash:
-            server_hashes_for_replication = grab_elements_around(sorted_hashes, i, repFactor)
-            break  # break the loop because we found the server we need to replicate to
-        else:
-            continue
-    return server_hashes_for_replication
+            return grab_elements_around(sorted_hashes, i, repFactor)
+    return grab_elements_around(sorted_hashes, len(sorted_hashes)-1, repFactor)
 
 def importIP():
     output = []
@@ -178,7 +167,7 @@ def sendJson(json, receiverList, path):
             response = requests.post(f'http://' + receiver + path, headers={'Content-Type': 'application/json'},
                                      json=json, timeout=timeout)
         except:
-            fallen.append(receiver)
+            healthCheck(receiver,"s")
 
 
 def parserInit():
@@ -190,6 +179,34 @@ def parserInit():
     parser.add_argument('-t ', '--timeout', type=int, default=5)
     return parser.parse_args()
 
+def healthCheck(target=None,label=None):
+    if(target != None):
+        try:
+            response = requests.get(f'http://{target}/heartbeat/', timeout=timeout)
+        except:
+            fallen[target] = label
+        else:
+            if(label == "m" and target not in masters): masters.append(target)
+            if(label == "s" and target not in slaves): slaves.append(target)
+            if(fallen.get(target) != None): fallen.pop(target)
+    else:
+        for f,l in fallen.items():
+            healthCheck(f,l)
+        for s in slaves:
+            healthCheck(s,"s")
+        for m in masters:
+            healthCheck(m,"m")
+        for f,l in fallen.items():
+            if(l == "m" and f not in masters): masters.remove(f)
+            if(l == "s" and f not in slaves): slaves.remove(f)
+        print("Slaves list:", slaves)
+        print("Masters list:", masters)
+        print("Fallen list:",fallen)
+
+def healthCheckThread(seconds):
+    while True:
+        time.sleep(seconds)
+        healthCheck()
 
 def main():
     global slaves
@@ -205,11 +222,14 @@ def main():
     timeout = args.timeout
     repFactor = args.replicationfactor
     slaves, masters = importIP()
-    fallen = []
+    fallen = {}
+    healthCheck()
     print("Done! Endpoint's ip is: " + IPaddr)
     print("Sending info to masters and slaves...")
     sendJson({'slaves': slaves}, masters, '/slaves')
     sendJson({'masters': masters}, slaves, '/masters')
+    daemon = Thread(target=healthCheckThread, args=(3,), daemon=True, name='healthCheckThread')
+    daemon.start()
     app.run(host=IPaddr, port=args.port)
 
 
