@@ -6,7 +6,8 @@ import socket
 import random
 import hashlib
 import time
-from threading import Thread
+from apscheduler.schedulers.background import BackgroundScheduler
+
 from itsdangerous import URLSafeTimedSerializer as Serializer, BadSignature, SignatureExpired
 
 app = Flask(__name__)
@@ -169,16 +170,6 @@ def sendJson(json, receiverList, path):
         except:
             healthCheck(receiver,"s")
 
-
-def parserInit():
-    parser = argparse.ArgumentParser(
-        prog='Endpoint Database 2024',
-        epilog='by Pablo Tores Rodriguez')
-    parser.add_argument('-p ', '--port', type=int, default=3000)
-    parser.add_argument('-f ', '--replicationfactor', type=int, default=1)
-    parser.add_argument('-t ', '--timeout', type=int, default=5)
-    return parser.parse_args()
-
 def healthCheck(target=None,label=None):
     if(target != None):
         try:
@@ -190,23 +181,28 @@ def healthCheck(target=None,label=None):
             if(label == "s" and target not in slaves): slaves.append(target)
             if(fallen.get(target) != None): fallen.pop(target)
     else:
-        for f,l in fallen.items():
+        for f,l in fallen.copy().items():
             healthCheck(f,l)
         for s in slaves:
             healthCheck(s,"s")
         for m in masters:
             healthCheck(m,"m")
-        for f,l in fallen.items():
-            if(l == "m" and f not in masters): masters.remove(f)
-            if(l == "s" and f not in slaves): slaves.remove(f)
+        for f,l in fallen.copy().items():
+            if(l == "m" and f in masters): masters.remove(f)
+            if(l == "s" and f in slaves): slaves.remove(f)
         print("Slaves list:", slaves)
         print("Masters list:", masters)
         print("Fallen list:",fallen)
 
-def healthCheckThread(seconds):
-    while True:
-        time.sleep(seconds)
-        healthCheck()
+def parserInit():
+    parser = argparse.ArgumentParser(
+        prog='Endpoint Database 2024',
+        epilog='by Pablo Tores Rodriguez')
+    parser.add_argument('-p ', '--port', type=int, default=3000)
+    parser.add_argument('-f ', '--replicationfactor', type=int, default=1)
+    parser.add_argument('-t ', '--timeout', type=int, default=5)
+    parser.add_argument('-s ', '--seconds', type=int, default=30)
+    return parser.parse_args()
 
 def main():
     global slaves
@@ -228,8 +224,9 @@ def main():
     print("Sending info to masters and slaves...")
     sendJson({'slaves': slaves}, masters, '/slaves')
     sendJson({'masters': masters}, slaves, '/masters')
-    daemon = Thread(target=healthCheckThread, args=(3,), daemon=True, name='healthCheckThread')
-    daemon.start()
+    scheduler = BackgroundScheduler()
+    job = scheduler.add_job(healthCheck, 'interval', seconds=args.seconds)
+    scheduler.start()
     app.run(host=IPaddr, port=args.port)
 
 
